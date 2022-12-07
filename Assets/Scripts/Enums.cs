@@ -6,5 +6,8 @@ public enum ItemIDCode
 {
     HealingPotion = 0,
     ManaPotion,
-    Helmet
+    Helmet,
+    Armor,
+    Sword,
+    Bow
 }
