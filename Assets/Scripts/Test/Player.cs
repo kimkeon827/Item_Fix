@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class Player : MonoBehaviour,IBattle
+public class Player : MonoBehaviour
 {
     public float attackPower = 100.0f;  // 공격력
     public float maxHP = 100.0f;        // 최대 HP

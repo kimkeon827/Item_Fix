@@ -8,6 +8,6 @@ public interface IBattle
 
     float AttackPower { get; }
 
-    void Attack(IBattle target);
+    //void Attack(IBattle target);
 
 }

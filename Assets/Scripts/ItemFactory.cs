@@ -19,7 +19,7 @@ public class ItemFactory
         GameObject obj = new GameObject();
 
         Item item = obj.AddComponent<Item>();           // Item 컴포넌트 추가하기
-        item.data = GameManager.Inst.ItemData[code];
+     //   item.data = GameManager.Inst.ItemData[code];
 
         string[] itemName = item.data.name.Split("_");
         obj.name = $"{itemName[1]}_{itemCount++}";      // 오브젝트 이름 설정하기
