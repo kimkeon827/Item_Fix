@@ -9,7 +9,7 @@ public class GameManager : Singleton< GameManager >
     /// <summary>
     /// 플레이어
     /// </summary>
-    TestPlayer player;
+    Player player;
 
 
     // 프로퍼티 ------------------------------------------------------------------------------------
@@ -17,7 +17,7 @@ public class GameManager : Singleton< GameManager >
     /// <summary>
     /// player 읽기 전용 프로퍼티.
     /// </summary>
-    public TestPlayer Player => player;
+    public Player Player => player;
 
     // 함수 ---------------------------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ public class GameManager : Singleton< GameManager >
     {
         
 
-        player = FindObjectOfType<TestPlayer>();
+        player = FindObjectOfType<Player>();
         
     }
 }

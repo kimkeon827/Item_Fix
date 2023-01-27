@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class Weapon : MonoBehaviour
 {
-    TestPlayer player;
+    Player player;
 
     private void Start()
     {
