@@ -8,12 +8,12 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour
 {
     public float moveSpeed = 3.0f;                       //이동 속도
-    public float rotateSpeed = 3.0f;                     // 회전 속도
-    Vector3 inputDir = Vector3.zero;                    //벡터 2로 입력받은걸 벡터 3로 바꾸기 
+    public float turnSpeed = 3.0f;                     // 회전 속도
+    Vector3 inputDir = Vector3.zero;                    // 입력으로 지정된 바라보는 방향 
     Quaternion targetRotation = Quaternion.identity;    // 회전 목표
     TestPlayerInputActions inputActions;  
     Animator anim;                                      //애니메이터 컴포넌트 캐싱용
-
+    Rigidbody rb;                                       // 리지드바디
 
     private void Awake()
     {
@@ -45,18 +45,25 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        transform.Translate(moveSpeed * Time.deltaTime * inputDir);
-        // 플레이어 이동을 moveSpeed, 이전 프레임에 걸린시간, inputDir을 통해 얻은 방향만큼 움직인다.
-        transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotateSpeed * Time.deltaTime);
-        // 플레이어 회전을 현재 플레이어가 보는 방향, 목표방향, 회전속도를 이전 프레임만큼 곱해서 방향을 만든다.        
+        transform.Translate(moveSpeed * Time.deltaTime * inputDir, Space.World);
+        
     }
+
+  
 
     private void OnMove(InputAction.CallbackContext context)
     {
         Vector2 input = context.ReadValue<Vector2>();
         inputDir.x = input.x;
         inputDir.y = 0.0f;
-        inputDir.z = input.y;   
+        inputDir.z = input.y;    
+    }
+
+    void Turn ()
+    {
+        Quaternion newRotation = Quaternion.LookRotation(inputDir);
+
+        rb.MoveRotation(newRotation);
     }
 
     /// <summary>
