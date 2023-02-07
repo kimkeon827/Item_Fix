@@ -16,14 +16,6 @@ public class ItemData_ManaPotion : ItemData, IUsable
     public bool Use(GameObject target = null)
     {
         bool result = false;
-        IMana mana = target.GetComponent<IMana>();    // 마나포션은 MP를 가지고 있는 target에게만 적용된다.
-        if (mana != null)
-        {
-            mana.ManaRegenerate(totalRegenPoint, duration); // 플레이어의 ManaRegenerate함수를 이용해서 마나 회복 처리
-
-            Debug.Log($"{itemName}을 사용했습니다. MP가 {duration}초 동안 {totalRegenPoint}만큼 증가합니다.");
-            result = true;
-        }
 
         return result;
     }

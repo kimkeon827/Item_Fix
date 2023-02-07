@@ -11,7 +11,7 @@ using UnityEditor;  //위의 전처리기 있을 때만 실행 버전에 넣어�
 [RequireComponent(typeof(Rigidbody))]   //필수적인 컴포넌트가 있을때 자동으로 넣는 유니티 속성
 [RequireComponent(typeof(Animator))]
 
-public class Enemy : MonoBehaviour, IBattle, IHealth
+public class Enemy : MonoBehaviour, IHealth
 {
     //웨이포인트 관련 변수...................................
     public Waypoints waypoints; //순찰에 필요한 웨이포인트들
@@ -59,7 +59,7 @@ public class Enemy : MonoBehaviour, IBattle, IHealth
 
     float attackSpeed = 1.0f;       // 1초마다 공격
     float attackCoolTime = 1.0f;    // 쿨타임이 0 미만이 되면 공격
-    IBattle attackTarget;
+    
 
     //델리게이트.................................................................
 
@@ -217,28 +217,6 @@ public class Enemy : MonoBehaviour, IBattle, IHealth
         rigid = GetComponent<Rigidbody>();
         bodyCollider = GetComponent<SphereCollider>();
 
-        //적 attack area
-        Enemy_AttackArea attackArea = GetComponentInChildren<Enemy_AttackArea>();
-        attackArea.onPlayerIn += (target) =>
-        {
-            if ( State == EnemyState.Chase )     // 추적 상태이면 
-            {
-                attackTarget = target;
-                State = EnemyState.Attack;      // 공격 상태로 변경
-            }
-        };
-         
-        attackArea.onPlayerOut += (target) =>
-        {
-            if ( attackTarget == target )        // 공격하던 대상이 범위를 벗어나면
-            {
-                attackTarget = null;            // 공격 대상을 비우기
-                if (State != EnemyState.Dead)
-                {
-                    State = EnemyState.Chase;       // 플레이어가 공격 범위에서 벗어나면 다시 추적 상태로
-                }
-            }
-        };
     }
 
     private void Start()
@@ -317,17 +295,14 @@ public class Enemy : MonoBehaviour, IBattle, IHealth
     private void Update_Attack()
     {
         attackCoolTime -= Time.deltaTime;   // 쿨타임 감소
-        transform.rotation =                // 공격 대상 바라보게 만들기
-            Quaternion.Slerp(
-                transform.rotation,
-                Quaternion.LookRotation(attackTarget.transform.position - transform.position),
-                0.1f);
+   
+       
 
         if (attackCoolTime < 0)            // 쿨타임 체크
         {
             // 쿨타임 다 됬으면 공격
             anim.SetTrigger("Attack");      // 공격 애니메이션 재생
-            Attack(attackTarget);           // 공격 처리            
+                      
         }
     }
 
@@ -424,14 +399,6 @@ public class Enemy : MonoBehaviour, IBattle, IHealth
         return result;
     }
 
-    /// <summary>
-    /// 공격용 함수
-    /// </summary>
-    /// <param name="target">공격할 대상</param>
-    public void Attack(IBattle target)
-    {
-  //      target?.Defence(AttackPower);
-    }
 
     /// <summary>
     /// 방어용 함수
