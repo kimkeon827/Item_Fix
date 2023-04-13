@@ -9,7 +9,8 @@ using UnityEditor;
 
 public class Enemy_AttackArea : MonoBehaviour
 {
- 
+    public Action<IBattle> onPlayerIn;
+    public Action<IBattle> onPlayerOut;
     public SphereCollider col;
 
 
@@ -33,7 +34,9 @@ public class Enemy_AttackArea : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
- 
+            Debug.Log("플레이어가 공격 범위에 들어옴.");
+            IBattle battle = other.GetComponent<IBattle>();
+            onPlayerIn?.Invoke(battle);
         }
     }
 
@@ -41,7 +44,9 @@ public class Enemy_AttackArea : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
-
+            Debug.Log("플레이어가 공격 범위에서 나감.");
+            IBattle battle = other.GetComponent<IBattle> ();
+            onPlayerOut?.Invoke(battle);
         }
     }
 }

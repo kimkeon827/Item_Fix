@@ -11,57 +11,93 @@ using UnityEditor;  //위의 전처리기 있을 때만 실행 버전에 넣어�
 [RequireComponent(typeof(Rigidbody))]   //필수적인 컴포넌트가 있을때 자동으로 넣는 유니티 속성
 [RequireComponent(typeof(Animator))]
 
-public class Enemy : MonoBehaviour, IHealth
+public class Enemy : MonoBehaviour, IHealth, IBattle
 {
-    //웨이포인트 관련 변수...................................
-    public Waypoints waypoints; //순찰에 필요한 웨이포인트들
-    Transform waypointTarget;   //적이 이동할 웨이포인트의 트랜스폼
-    //Vector3 lookDir;    //적이 이동하는 방향(바라보는 방향)
+    // 웨이포인트 관련 변수 -------------------------------------------------
+    /// <summary>
+    /// 적이 순찰할 웨이포인트들
+    /// </summary>
+    public Waypoints waypoints; 
 
-    public float moveSpeed = 3.0f;  //적 이동속도
-
-    //추적 관련 변수(적 추적 기능 추가)...........................
-    public float sightRange = 10.0f;    //시야범위 10.0f
-    public float closeSightRange = 2.5f;    //근접 시야 범위 추가
-
-    public float sightHalfAngle = 50.0f;   //시야각 반 50도 
-    Transform chaseTarget;  //추적할 플레이어의 트랜스폼
-
-    //상태 관련 변수 ............................................
-    EnemyState state = EnemyState.Patrol; //적 현재 상태
-    public float waitTime = 2.0f;   //목적지에 도달했을 때 기다리는 시간 설정
-    float waitTimer;    //남아있는 기다리는 시간
+    /// <summary>
+    /// 지금 적이 이동할 목표 지점(웨이포인트)의 트랜스폼
+    /// </summary>
+    Transform waypointTarget;   
     
+    // 이동 관련 변수 -------------------------------------------------------
+    /// <summary>
+    /// 적의 이동 속도
+    /// </summary>
+    public float moveSpeed = 3.0f;
 
-    //컴포넌트 캐싱용 변수.......................
+    // 추적 관련 변수 -------------------------------------------------
+    /// <summary>
+    /// 시야 범위
+    /// </summary>
+    public float sightRange = 10.0f;    
+
+    public float closeSightRange = 2.5f;    
+
+    /// <summary>
+    /// 시야각의 절반
+    /// </summary>
+    public float sightHalfAngle = 50.0f;
+    
+    /// <summary>
+    /// 추적할 플레이어의 트랜스폼
+    /// </summary>
+    Transform chaseTarget;
+
+    // 상태 관련 변수 -------------------------------------------------
+    EnemyState state = EnemyState.Patrol; //적 현재 상태
+    public float waitTime = 2.0f;   //목적지에 도달했을 때 기다리는 시간
+    float waitTimer;    //남아있는 기다리는 시간
+
+    // 컴포넌트 캐싱용 변수 -------------------------------------------------
     Animator anim;
     NavMeshAgent agent;
-
-    SphereCollider bodyCollider;    //적 콜라이더 찾기
-    Rigidbody rigid;  //적 리지드 바디 찾기
+    SphereCollider bodyCollider;    
+    Rigidbody rigid;  
     ParticleSystem dieEffect;       // 죽을 때 표시될 이팩트
 
-    //추가 데이터 타입..............................
-    protected enum EnemyState //적 상태 대기,순찰 
+    // 추가 데이터 타입 -------------------------------------------------
+    /// <summary>
+    /// 적의 상태를 나타내기 위한 enum
+    /// </summary>
+    protected enum EnemyState  
     {
-        Wait = 0,   //대기 상태
-        Patrol, //순찰 상태
-        Chase,   //추적 상태
-        Attack, //공격 상태
-        Dead    //사망 상태
+        Wait = 0,   // 대기 상태
+        Patrol,     // 순찰 상태
+        Chase,      // 추적 상태
+        Attack,     // 공격 상태
+        Dead        // 사망 상태
     }
 
-    //전투용 데이터..........................................
+    // 전투용 데이터 -------------------------------------------------
     public float attackPower = 10.0f;      // 공격력
     public float defencePower = 3.0f;      // 방어력
-    public float maxHP = 100.0f;    // 최대 HP
-    float hp = 100.0f;              // 현재 HP
+    public float maxHP = 100.0f;           // 최대 HP
+    float hp = 100.0f;                     // 현재 HP
 
-    float attackSpeed = 1.0f;       // 1초마다 공격
-    float attackCoolTime = 1.0f;    // 쿨타임이 0 미만이 되면 공격
-    
+    float attackSpeed = 1.0f;              // 1초마다 공격
+    float attackCoolTime = 1.0f;           // 쿨타임이 0 미만이 되면 공격
+    IBattle attackTarget;
 
-    //델리게이트.................................................................
+    // 아이템 드랍용 데이터 -------------------------------------------------
+    [System.Serializable]
+    public struct ItemDropInfo          // 드랍 아이템 정보
+    {
+        public ItemIDCode id;           // 아이템 종류
+        [Range(0.0f,1.0f)] 
+        public float dropPercentage;    // 아이템 드랍 확률
+    }
+
+    /// <summary>
+    /// 이 몬스터가 드랍할 아이템의 종류
+    /// </summary>
+    public ItemDropInfo[] dropItems;
+
+    // 델리게이트 -------------------------------------------------
 
     /// <summary>
     /// HP가 변경될 때 실행될 델리게이트
@@ -73,14 +109,13 @@ public class Enemy : MonoBehaviour, IHealth
     /// </summary>
     public Action onDie { get; set; }
     
-    Action stateUpdate; //상태별 업데이터 함수를 가질 델리게이트
-
-
-    //프로퍼티...............................................................
-
     /// <summary>
-    /// 
+    /// 상태별 업데이터 함수를 가질 델리게이트
     /// </summary>
+    Action stateUpdate;
+    // -------------------------------------------------
+
+    // 프로퍼티 -------------------------------------------------
     public float AttackPower => attackPower;
 
     public float DefencePower => defencePower;
@@ -94,97 +129,76 @@ public class Enemy : MonoBehaviour, IHealth
             {
                 hp = value;
 
-                if ( State !=EnemyState.Dead && hp < 0)  //상태 dead, hp가 0이 되는 순간 die처리
-                {
-                    
+                if ( State != EnemyState.Dead && hp < 0)  
+                {                    
                     Die();
                 }
-
                 hp = Mathf.Clamp(hp, 0.0f, maxHP);
 
                 onHealthChange?.Invoke(hp / maxHP);
-
-
             }
         }
     }
 
     public float MaxHP => maxHP;
 
-    //이동할 웨이포인트를 나타내는 프로퍼티...........................................
+    /// <summary>
+    /// 이동할 목적지(웨이포인트)를 나타내는 프로퍼티
+    /// </summary>
     protected Transform WaypointTarget
     {
         get => waypointTarget;
         set
         {
-            waypointTarget = value;
-            //lookDir = (moveTarget.position - transform.position).normalized;    //lookDir도 함께 갱신
-            //agent.SetDestination(moveTarget.position);
+            waypointTarget = value;            
         }
     }
 
-    //적의 상태를 나타내는 프로퍼티..........................
+    /// <summary>
+    /// 적의 상태를 나타내는 프로퍼티
+    /// </summary>
     protected EnemyState State
     {
         get => state;
         set
-        {
-            //switch (state)//이전 상태(상태를 나가면서 해야 할일 처리)
-            //{
-            //    case EnemyState.Wait:
-            //        break;
-            //    case EnemyState.Patrol:
-            //        break;
-            //    default:
-            //        break;
-            //}
+        {            
             if(state != value)
             {
                 state = value;  //새로운 상태로 변경
                 switch (state) //새로운 상태(새로운 상태로 들어가면서 해야 할 일 처리)
                 {
-                    //적 대기 상태 정의
                     case EnemyState.Wait:
                         agent.isStopped = true;
                         agent.velocity = Vector3.zero;
-                        waitTimer = waitTime;   //타이머 초기화
+                        waitTimer = waitTime;       //타이머 초기화
                         anim.SetTrigger("Stop");    //Idle 애니메이션 재생
                         stateUpdate = Update_Wait;  //FixedUpdate에서 실행될 델리게이트 변경
-                        break;
-
-                    //적 이동 상태 정의 
+                        break;                    
                     case EnemyState.Patrol:
                         agent.isStopped = false;
                         agent.SetDestination(WaypointTarget.position);
                         anim.SetTrigger("Move");    //Run 애니메이션 재생
                         stateUpdate = Update_Patrol;//FixedUpdate에서 실행될 델리게이트 변경
-                        break;
-
-                    //적 추적 상태 정의
+                        break;                    
                     case EnemyState.Chase:
-                        agent.isStopped = false;
-                        //agent.SetDestination(chaseTarget.position); 계산량이 많아 제거
-                        anim.SetTrigger("Move");
-                        stateUpdate = Update_Chase;//FixedUpdate에서 실행될 델리게이트 변경
+                        agent.isStopped = false;                        
+                        anim.SetTrigger("Move");        // 이동 애니메이션 재생
+                        stateUpdate = Update_Chase;     //FixedUpdate에서 실행될 델리게이트 변경
                         break;
-
                     case EnemyState.Attack:
                         agent.isStopped = true;         // 이동 정지
                         agent.velocity = Vector3.zero;
                         anim.SetTrigger("Stop");        // 애니메이션 변경
                         attackCoolTime = attackSpeed;   // 공격 쿨타임 초기화
                         stateUpdate = Update_Attack;    // FixedUpdate에서 실행될 델리게이트 변경
-                        break;
-
-                    //적 사망 상태 정의
+                        break;                    
                     case EnemyState.Dead:
-                        agent.isStopped = true; //길찾기 정지
+                        agent.isStopped = true;             //길찾기 정지
                         agent.velocity = Vector3.zero;
-                        anim.SetTrigger("Die"); //사망 애니메이션 재생
+                        anim.SetTrigger("Die");             //사망 애니메이션 재생
                         StartCoroutine(DeadRepresent());    // 시간이 지나면 서서히 가라앉는 연출 실행
-                        stateUpdate = Update_Dead;
+                        stateUpdate = Update_Dead;          // FixedUpdate에서 실행될 델리게이트 변경
                         break;
-
                     default:
                         break;
                 }
@@ -192,8 +206,10 @@ public class Enemy : MonoBehaviour, IHealth
         }
     }
 
-
-    //남은 대기 시간을 나타내는 프로퍼티...................
+        
+    /// <summary>
+    /// 남은 대기 시간을 나타내는 프로퍼티
+    /// </summary>
     protected float WaitTimer
     {
         get => waitTimer;
@@ -206,16 +222,38 @@ public class Enemy : MonoBehaviour, IHealth
             }
         }
     }
-    //.................................................................
+    // -------------------------------------------------
 
     private void Awake()
     {
         //컴포넌트 찾기
         anim = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
-        dieEffect = GetComponentInChildren<ParticleSystem>();
-        rigid = GetComponent<Rigidbody>();
         bodyCollider = GetComponent<SphereCollider>();
+        rigid = GetComponent<Rigidbody>();
+        dieEffect = GetComponentInChildren<ParticleSystem>();
+
+        Enemy_AttackArea attackArea = GetComponentInChildren<Enemy_AttackArea>();
+        attackArea.onPlayerIn += (target) =>
+        {
+            //if (State == EnemyState.Chase)
+            //{
+                attackTarget = target;
+                State = EnemyState.Attack;
+            //}
+        };
+
+        attackArea.onPlayerOut += (target) =>
+        {
+            if (attackTarget == target)
+            {
+                attackTarget = null;
+                if (State != EnemyState.Dead)
+                {
+                    State = EnemyState.Chase;
+                }
+            }
+        };
 
     }
 
@@ -249,7 +287,7 @@ public class Enemy : MonoBehaviour, IHealth
         {
             State = EnemyState.Chase;
         }
-        
+               
         //상태 업데이트
         stateUpdate();
     }
@@ -295,14 +333,17 @@ public class Enemy : MonoBehaviour, IHealth
     private void Update_Attack()
     {
         attackCoolTime -= Time.deltaTime;   // 쿨타임 감소
-   
+        transform.rotation =
+            Quaternion.Slerp(
+                transform.rotation,
+                Quaternion.LookRotation(attackTarget.transform.position - transform.position),
+                0.1f);
        
-
         if (attackCoolTime < 0)            // 쿨타임 체크
         {
             // 쿨타임 다 됬으면 공격
             anim.SetTrigger("Attack");      // 공격 애니메이션 재생
-                      
+            Attack(attackTarget);           // 공격 처리                      
         }
     }
 
@@ -312,56 +353,38 @@ public class Enemy : MonoBehaviour, IHealth
 
     }
 
-    //적 감지+추적 함수.............................
+    /// <summary>
+    /// 플레이어를 감지하는 함수
+    /// </summary>
+    /// <returns>적이 플레이어를 감지하면 true. 아니면 false</returns>
     bool SearchPlayer()
     {
-        bool result = false;    //에러 제거용
-        chaseTarget = null; //안보일때는 null
+        bool result = false;
+        chaseTarget = null;
 
-        //Overlap = 겹친 영역 안에 있는 물체 감지   
-        //특정 범위 안에 플레이어 감지
-        Collider[] colliders = Physics.OverlapSphere(transform.position, sightRange, LayerMask.GetMask("Player"));  
-        if( colliders.Length > 0)
+        Collider[] colliders = Physics.OverlapSphere(transform.position, sightRange, LayerMask.GetMask("Player"));
+        if(colliders.Length > 0 )
         {
-            //Player가 sightRange 안에 있다.
-            //Debug.Log("Player가 시야 범위에 있다"); //시야 체크용 디버그
+            Vector3 playerPos = colliders[0].transform.position;
+            Vector3 toPlayerDir = playerPos - transform.position;
 
-
-            //특정 시야각 안에 있는지 확인하는 방법 
-            //Vector3.Angle(a,b)  //a벡터와 b벡터 사이각을 계산
-            //sightHalfAngle;
-            //Vector3 playerPos = colliders[0].transform.position;
-            //float angle = Vector3.Angle(transform.forward, playerPos - transform.position);
-            //if( sightHalfAngle > angle) 
-            Vector3 playerPos = colliders[0].transform.position;    //플레이어의 위치
-            Vector3 toPlayerDir = playerPos - transform.position;   //플레이어로 가는 방향
-
-            if (toPlayerDir.sqrMagnitude < closeSightRange * closeSightRange)  // 근접 시야 범위 안에 있는지 확인
+            if( toPlayerDir.sqrMagnitude < closeSightRange * closeSightRange)
             {
-                // 근접 시야 범위 안에 player가 있다.
-
-                chaseTarget = colliders[0].transform;   // 추적할 플레이어 저장
+                chaseTarget = colliders[0].transform;
                 result = true;
             }
             else
             {
-                if (IsInSightAngle(toPlayerDir))    // 시야각 안에 플레이어가 있는지 확인
+                if(IsInSightAngle(toPlayerDir))
                 {
-                    // 시야각 안에 player가 있다.
-
-                    // 시야가 다른 물체로 인해 막혔는지 확인
-                    if (!IsSightBlocked(toPlayerDir))
+                    if(!IsSightBlocked(toPlayerDir))
                     {
-                        // 시야가 다른 몰체로 인해 막히지 않았다.
-
-                        chaseTarget = colliders[0].transform;   // 추적할 플레이어 저장
+                        chaseTarget = colliders[0].transform;
                         result = true;
                     }
                 }
             }
         }
-        //LayerMask.GetMask("Player","Water"));   // 2^6(64) 리턴, getmask = 레이어 여러개를 한번에 받을수 있음    > 2^6+2^4 = 80
-        //LayerMask.NameToLayer("Player"); //6 리턴
 
         return result;
     }
@@ -399,6 +422,15 @@ public class Enemy : MonoBehaviour, IHealth
         return result;
     }
 
+    /// <summary>
+    /// 공격용 함수
+    /// </summary>
+    /// <param name="target">공격할 대상</param>
+    public void Attack(IBattle target)
+    {
+        target?.Defence(AttackPower);
+        attackCoolTime = attackSpeed;   // 쿨타임 초기화
+    }
 
     /// <summary>
     /// 방어용 함수
@@ -409,7 +441,6 @@ public class Enemy : MonoBehaviour, IHealth
         if( State != EnemyState.Dead )    //죽지 않을 때만 맞기 가능
         {
             anim.SetTrigger("Hit");
-
             HP -= (damage - DefencePower);
         }
         
@@ -422,8 +453,42 @@ public class Enemy : MonoBehaviour, IHealth
     {
         State = EnemyState.Dead;
         onDie?.Invoke();
+
+        MakeDropItem();
     }
 
+    /// <summary>
+    /// 아이템 드랍 함수
+    /// </summary>
+    void MakeDropItem()
+    {
+        float percentage = UnityEngine.Random.Range(0.0f, 1.0f);    // 드랍할 아이템을 결정하기 위한 랜덤 숫자 가져오기
+        int index = 0;  // 드랍할 (내가 가지고 있는) 아이템의 인덱스
+        float max = 0;  // 가장 드랍할 확률이 높은 아이템을 찾기 위한 임시값
+        for (int i = 0; i < dropItems.Length; i++)
+        {
+            if( max < dropItems[i].dropPercentage)
+            {
+                max = dropItems[i].dropPercentage;  // 가장 드랍 확률이 높은 아이템 찾기
+                index = i;                          // index의 디폴트 값은 가장 드랍 확률이 높은 아이템
+            }
+        }
+
+        float checkPercentage = 0.0f;               // 아이템의 드랍 확률을 누적하는 임시 값
+        for(int i = 0; i < dropItems.Length; i++)
+        {
+            checkPercentage += dropItems[i].dropPercentage; // checkPercentage를 단계별로 계속 누적 시킴
+
+            // checkPercentage와 percentage 비교 (랜덤 숫자가 누적된 확률보다 낮은지 확인, 낮으면 해당 아이템 생성)
+            if ( percentage <= checkPercentage)
+            {
+                index = i;  // 생성할 아이템 결정
+                break;      // for문 종료
+            }
+        }
+
+        GameObject obj = ItemFactory.MakeItem(dropItems[index].id, transform.position, true);   // 선택된 아이템 생성
+    }
 
     /// <summary>
     /// 사망 연출용 코루틴
@@ -444,33 +509,15 @@ public class Enemy : MonoBehaviour, IHealth
         bodyCollider.enabled = false;   // 컬라이더 컴포넌트 끄기
         rigid.isKinematic = false;      // 키네마틱 끄기
         rigid.drag = 10.0f;             // 마찰력은 천천히 떨어질 정도로
-        Destroy(dieEffect.gameObject);  // 이팩트 삭제
-
+        
         yield return new WaitForSeconds(1.5f);  // 1.5초 뒤에
 
         // 삭제 처리
-        SpawnManager._instance.enemyCount--;    //죽은 적 숫자만큼 카운트 다운**
-
-        Destroy(this.gameObject);       // 적도 삭제
-
-        //SpawnManager._instance.isSpawn[int.Parse(transform.parent.name) - 1] = false;   //몬스터가 죽은 자리를 false 처리로 해당 자리에 스폰하기
-
-
-        //yield return new WaitForSeconds(5f);  // 5초 뒤에 적 다시 생성( 몬스터 리젠 가능한가)
-        //Instantiate(this.gameObject, transform.position  );   
-        //Instantiate(dieEffect.gameObject);
-        //Instantiate(hpBar.gameObject);
-
-
-
+        Destroy(dieEffect.gameObject);  // 이펙트 삭제
+        Destroy(this.gameObject);       // 적도 삭제        
     }
 
-    public void Test()
-    {
-        SearchPlayer();
-        //Debug.Log(this.gameObject.layer);
-        //this.gameObject.layer = 0b_0000_0000_0000_0000_0000_0000_0000_1101;
-    }
+    
 
     void Test_HP_Change(float ratio)
     {
